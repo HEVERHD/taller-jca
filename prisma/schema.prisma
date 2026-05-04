@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Cliente {
+  id        String     @id @default(cuid())
+  nombre    String
+  telefono  String
+  email     String?
+  vehiculos Vehiculo[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([telefono])
+}
+
+model Vehiculo {
+  id          String     @id @default(cuid())
+  placa       String     @unique
+  marca       String
+  modelo      String
+  kilometraje Int
+  clienteId   String
+  cliente     Cliente    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  servicios   Servicio[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([clienteId])
+  @@index([placa])
+}
+
+enum EstadoServicio {
+  PENDIENTE
+  EN_PROCESO
+  TERMINADO
+}
+
+model Servicio {
+  id               String         @id @default(cuid())
+  fecha            DateTime       @default(now())
+  diagnostico      String
+  trabajoRealizado String?
+  mecanicoAsignado String
+  estado           EstadoServicio @default(PENDIENTE)
+  costoTotal       Float?
+  anticipo         Float?
+  vehiculoId       String
+  vehiculo         Vehiculo       @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([vehiculoId])
+  @@index([estado])
+  @@index([fecha])
+}
