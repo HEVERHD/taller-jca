@@ -3,14 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Car, Wrench } from "lucide-react";
+import { LayoutDashboard, Users, Car, Wrench, TrendingUp, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logoutAction } from "@/actions/auth";
 
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/vehiculos", label: "Vehículos", icon: Car },
-  { href: "/servicios", label: "Servicios", icon: Wrench },
+  { href: "/dashboard", label: "Dashboard",  icon: LayoutDashboard },
+  { href: "/clientes",  label: "Clientes",   icon: Users },
+  { href: "/vehiculos", label: "Vehículos",  icon: Car },
+  { href: "/servicios", label: "Servicios",  icon: Wrench },
+  { href: "/ingresos",  label: "Ingresos",   icon: TrendingUp },
 ];
 
 export function Sidebar() {
@@ -60,11 +62,20 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-5 py-4 border-t border-zinc-800">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-400 rounded-full" />
+      <div className="px-3 py-4 border-t border-zinc-800 space-y-3">
+        <div className="flex items-center gap-2 px-3">
+          <div className="w-2 h-2 bg-green-400 rounded-full shrink-0" />
           <p className="text-xs text-zinc-500">Sistema activo · v1.0</p>
         </div>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-red-400 transition-colors"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            Cerrar sesión
+          </button>
+        </form>
       </div>
     </aside>
   );
