@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Car, Wrench, TrendingUp, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PushBell } from "@/components/pwa/push-bell";
 import { logoutAction } from "@/actions/auth";
 
 const links = [
@@ -63,9 +64,12 @@ export function Sidebar() {
       </nav>
 
       <div className="px-3 py-4 border-t border-zinc-800 space-y-3">
-        <div className="flex items-center gap-2 px-3">
-          <div className="w-2 h-2 bg-green-400 rounded-full shrink-0" />
-          <p className="text-xs text-zinc-500">Sistema activo · v1.0</p>
+        <div className="flex items-center justify-between px-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-400 rounded-full shrink-0" />
+            <p className="text-xs text-zinc-500">Sistema activo · v1.0</p>
+          </div>
+          <PushBell className="p-1.5 rounded-lg hover:bg-zinc-800 transition-colors" />
         </div>
         <form action={logoutAction}>
           <button

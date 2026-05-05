@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, LayoutDashboard, Users, Car, Wrench, TrendingUp, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PushBell } from "@/components/pwa/push-bell";
 import { logoutAction } from "@/actions/auth";
 
 const links = [
@@ -34,6 +35,7 @@ export function MobileHeader() {
           />
         </Link>
         <div className="flex items-center gap-1">
+          <PushBell className="p-2 rounded-lg hover:bg-zinc-800 transition-colors" />
           <ThemeToggle />
           <button
             onClick={() => setOpen(!open)}
