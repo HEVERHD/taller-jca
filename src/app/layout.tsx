@@ -19,6 +19,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Jhan Carlos Arias | Latonería y Pintura",
   description: "Sistema de gestión para Taller Jhan Carlos Arias",
+  icons: {
+    icon: "/favicon1.png",
+    shortcut: "/favicon1.png",
+    apple: "/favicon1.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

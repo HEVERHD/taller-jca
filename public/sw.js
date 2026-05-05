@@ -25,8 +25,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title ?? "Taller JCA", {
       body: data.body ?? "",
-      icon: "/logo2.png",
-      badge: "/logo2.png",
+      icon: "/favicon1.png",
+      badge: "/favicon1.png",
       data: { url: data.url ?? "/dashboard" },
       vibrate: [200, 100, 200],
     })
