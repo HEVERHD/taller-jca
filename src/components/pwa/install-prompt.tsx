@@ -8,47 +8,80 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const DISMISSED_KEY = "pwa-install-dismissed";
+declare global {
+  interface Window {
+    __pwaPrompt?: BeforeInstallPromptEvent | null;
+  }
+}
+
+// Dismissal expira en 3 días para que vuelva a aparecer
+const DISMISSED_KEY = "pwa-install-dismissed-until";
+
+function isDismissed() {
+  const until = localStorage.getItem(DISMISSED_KEY);
+  if (!until) return false;
+  return Date.now() < Number(until);
+}
+
+function dismiss3Days() {
+  localStorage.setItem(
+    DISMISSED_KEY,
+    String(Date.now() + 3 * 24 * 60 * 60 * 1000)
+  );
+}
 
 export function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // No mostrar si ya está instalada como PWA
+    // Ya instalada como PWA → no mostrar
     if (window.matchMedia("(display-mode: standalone)").matches) return;
-    if (localStorage.getItem(DISMISSED_KEY)) return;
+    if (isDismissed()) return;
 
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream: unknown }).MSStream;
+    const ios =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+      !(window as unknown as { MSStream: unknown }).MSStream;
     setIsIOS(ios);
 
     if (ios) {
-      // iOS no soporta beforeinstallprompt — mostrar instrucciones
-      setTimeout(() => setShow(true), 4000);
+      setTimeout(() => setShow(true), 2000);
       return;
     }
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setTimeout(() => setShow(true), 4000);
+    // ① El evento ya ocurrió antes de que React montara → está en window
+    if (window.__pwaPrompt) {
+      setPrompt(window.__pwaPrompt);
+      setTimeout(() => setShow(true), 1000);
+      return;
+    }
+
+    // ② El evento llega después → escuchamos el custom event
+    const onReady = () => {
+      if (window.__pwaPrompt) {
+        setPrompt(window.__pwaPrompt);
+        setTimeout(() => setShow(true), 1000);
+      }
     };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    window.addEventListener("pwa-prompt-ready", onReady);
+    return () => window.removeEventListener("pwa-prompt-ready", onReady);
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") dismiss();
-    setDeferredPrompt(null);
+    if (!prompt) return;
+    await prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === "accepted") {
+      setShow(false);
+      window.__pwaPrompt = null;
+    }
+    setPrompt(null);
   };
 
-  const dismiss = () => {
+  const handleDismiss = () => {
     setShow(false);
-    localStorage.setItem(DISMISSED_KEY, "1");
+    dismiss3Days();
   };
 
   if (!show) return null;
@@ -60,17 +93,22 @@ export function InstallPrompt() {
           <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/30">
             <Smartphone className="w-5 h-5 text-white" />
           </div>
+
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">Instalar app</p>
+
             {isIOS ? (
               <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Toca <Share className="w-3 h-3 inline mx-0.5 text-zinc-300" /> en Safari
-                y luego <strong className="text-zinc-200">"Agregar a inicio"</strong> para
-                acceso rápido.
+                En Safari toca{" "}
+                <Share className="w-3 h-3 inline mx-0.5 text-zinc-300" /> y
+                luego{" "}
+                <strong className="text-zinc-200">"Agregar a inicio"</strong>{" "}
+                para acceso rápido.
               </p>
             ) : (
               <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
-                Agrega Taller JCA a tu pantalla de inicio para acceso rápido sin abrir el navegador.
+                Agrega Taller JCA a tu pantalla de inicio para acceso directo
+                sin abrir el navegador.
               </p>
             )}
 
@@ -83,7 +121,7 @@ export function InstallPrompt() {
                   Instalar
                 </button>
                 <button
-                  onClick={dismiss}
+                  onClick={handleDismiss}
                   className="flex-1 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium transition-colors"
                 >
                   Ahora no
@@ -92,15 +130,16 @@ export function InstallPrompt() {
             )}
             {isIOS && (
               <button
-                onClick={dismiss}
+                onClick={handleDismiss}
                 className="mt-3 w-full h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium transition-colors"
               >
                 Entendido
               </button>
             )}
           </div>
+
           <button
-            onClick={dismiss}
+            onClick={handleDismiss}
             className="text-zinc-500 hover:text-zinc-300 transition-colors shrink-0 -mt-0.5"
           >
             <X className="w-4 h-4" />

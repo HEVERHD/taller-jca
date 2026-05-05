@@ -37,6 +37,15 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      {/* Captura beforeinstallprompt ANTES de que React hidrate */}
+      <script dangerouslySetInnerHTML={{ __html: `
+        window.__pwaPrompt=null;
+        window.addEventListener('beforeinstallprompt',function(e){
+          e.preventDefault();
+          window.__pwaPrompt=e;
+          window.dispatchEvent(new Event('pwa-prompt-ready'));
+        });
+      `}} />
       <body className="min-h-full flex flex-col">
         <Providers>
           {children}

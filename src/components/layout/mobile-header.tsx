@@ -1,14 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, LayoutDashboard, Users, Car, Wrench, TrendingUp, LogOut } from "lucide-react";
+import { Menu, X, LayoutDashboard, Users, Car, Wrench, TrendingUp, Download, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PushBell } from "@/components/pwa/push-bell";
 import { logoutAction } from "@/actions/auth";
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+declare global {
+  interface Window {
+    __pwaPrompt?: BeforeInstallPromptEvent | null;
+  }
+}
 
 const links = [
   { href: "/dashboard", label: "Dashboard",  icon: LayoutDashboard },
@@ -21,6 +32,30 @@ const links = [
 export function MobileHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    // Mostrar botón si la app NO está instalada y el prompt está disponible
+    const check = () => {
+      const standalone = window.matchMedia("(display-mode: standalone)").matches;
+      setCanInstall(!standalone && !!window.__pwaPrompt);
+    };
+    check();
+    window.addEventListener("pwa-prompt-ready", check);
+    return () => window.removeEventListener("pwa-prompt-ready", check);
+  }, []);
+
+  const handleInstall = async () => {
+    const p = window.__pwaPrompt;
+    if (!p) return;
+    await p.prompt();
+    const { outcome } = await p.userChoice;
+    if (outcome === "accepted") {
+      setCanInstall(false);
+      window.__pwaPrompt = null;
+    }
+    setOpen(false);
+  };
 
   return (
     <>
@@ -77,7 +112,19 @@ export function MobileHeader() {
                   </Link>
                 );
               })}
+
+              {/* Botón de instalación — visible solo cuando el navegador lo permite */}
+              {canInstall && (
+                <button
+                  onClick={handleInstall}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-orange-400 hover:bg-zinc-800 hover:text-orange-300 transition-all duration-150"
+                >
+                  <Download className="w-4 h-4 shrink-0" />
+                  Agregar a inicio
+                </button>
+              )}
             </div>
+
             <div className="border-t border-zinc-800 pt-3 mt-3">
               <form action={logoutAction}>
                 <button
