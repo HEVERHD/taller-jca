@@ -11,7 +11,7 @@ import { createCliente, createClienteConVehiculo, updateCliente } from "@/action
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Car, Plus, X } from "lucide-react";
+import { Car, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Subschema para vehículo sin clienteId
 const vehiculoNuevoSchema = vehiculoSchema.omit({ clienteId: true });
@@ -23,12 +23,16 @@ interface ClienteFormProps {
   id?: string;
 }
 
+const STEPS = ["Datos", "Vehículo"] as const;
+
 export function ClienteForm({ defaultValues, id }: ClienteFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [serverErrors, setServerErrors]     = useState<Record<string, string[]>>({});
   const [serverVehiculoErrors, setServerVehiculoErrors] = useState<Record<string, string[]>>({});
   const [agregarVehiculo, setAgregarVehiculo] = useState(false);
+  // Edit mode has only 1 step; create mode has 2
+  const [step, setStep] = useState(1);
 
   const clienteForm = useForm<ClienteInput>({
     resolver: zodResolver(clienteSchema),
@@ -39,6 +43,11 @@ export function ClienteForm({ defaultValues, id }: ClienteFormProps) {
     resolver: zodResolver(vehiculoNuevoSchema) as never,
     defaultValues: { placa: "", marca: "", modelo: "", kilometraje: 0 },
   });
+
+  async function handleNext() {
+    const valid = await clienteForm.trigger(["nombre", "telefono", "email"]);
+    if (valid) setStep(2);
+  }
 
   function onSubmit(clienteData: ClienteInput) {
     startTransition(async () => {
@@ -102,43 +111,99 @@ export function ClienteForm({ defaultValues, id }: ClienteFormProps) {
   return (
     <form onSubmit={clienteForm.handleSubmit(onSubmit)} className="space-y-5 max-w-lg">
 
-      {/* ── Datos del cliente ─────────────────────────────────────────── */}
-      <div className="space-y-1.5">
-        <Label htmlFor="nombre">Nombre completo *</Label>
-        <Input id="nombre" placeholder="Ej: Carlos Rodríguez" {...clienteForm.register("nombre")} />
-        {clienteFieldError("nombre") && (
-          <p className="text-xs text-red-500">{clienteFieldError("nombre")}</p>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="telefono">Teléfono *</Label>
-        <Input id="telefono" placeholder="Ej: 3001234567" {...clienteForm.register("telefono")} />
-        {clienteFieldError("telefono") && (
-          <p className="text-xs text-red-500">{clienteFieldError("telefono")}</p>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="email">Email (opcional)</Label>
-        <Input id="email" type="email" placeholder="cliente@email.com" {...clienteForm.register("email")} />
-        {clienteFieldError("email") && (
-          <p className="text-xs text-red-500">{clienteFieldError("email")}</p>
-        )}
-      </div>
-
-      {/* ── Sección de vehículo (solo al crear) ───────────────────────── */}
+      {/* ── Indicador de pasos (solo al crear) ───────────────────────── */}
       {!id && (
-        <div className="pt-1">
-          {!agregarVehiculo ? (
+        <div className="flex items-center gap-1">
+          {STEPS.map((label, i) => {
+            const s = i + 1;
+            const isActive = s === step;
+            const isDone   = s < step;
+            return (
+              <div key={s} className="flex items-center gap-1">
+                <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 transition-colors ${
+                  isActive ? "bg-orange-500 text-white" :
+                  isDone   ? "bg-orange-500/25 text-orange-400" :
+                             "bg-zinc-800 border border-zinc-700 text-zinc-500"
+                }`}>
+                  {s}
+                </div>
+                <span className={`text-xs font-medium ${isActive ? "text-zinc-200" : "text-zinc-500"}`}>
+                  {label}
+                </span>
+                {s < STEPS.length && (
+                  <div className={`w-6 h-px mx-1 ${isDone ? "bg-orange-500/40" : "bg-zinc-700"}`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Paso 1: Datos del cliente ─────────────────────────────────── */}
+      {step === 1 && (
+        <>
+          <div className="space-y-1.5">
+            <Label htmlFor="nombre">Nombre completo *</Label>
+            <Input id="nombre" placeholder="Ej: Carlos Rodríguez" {...clienteForm.register("nombre")} />
+            {clienteFieldError("nombre") && (
+              <p className="text-xs text-red-500">{clienteFieldError("nombre")}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="telefono">Teléfono *</Label>
+            <Input id="telefono" placeholder="Ej: 3001234567" {...clienteForm.register("telefono")} />
+            {clienteFieldError("telefono") && (
+              <p className="text-xs text-red-500">{clienteFieldError("telefono")}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email (opcional)</Label>
+            <Input id="email" type="email" placeholder="cliente@email.com" {...clienteForm.register("email")} />
+            {clienteFieldError("email") && (
+              <p className="text-xs text-red-500">{clienteFieldError("email")}</p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            {id ? (
+              <Button type="submit" disabled={isPending} className="bg-orange-500 hover:bg-orange-600 text-white">
+                {isPending ? "Guardando..." : "Actualizar Cliente"}
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleNext} className="bg-orange-500 hover:bg-orange-600 text-white gap-1">
+                Siguiente <ChevronRight className="w-4 h-4" />
+              </Button>
+            )}
             <button
               type="button"
-              onClick={() => setAgregarVehiculo(true)}
-              className="flex items-center gap-2 text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
+              onClick={() => router.back()}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-sm font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
             >
-              <Plus className="w-4 h-4" />
-              Registrar vehículo ahora
+              Cancelar
             </button>
+          </div>
+        </>
+      )}
+
+      {/* ── Paso 2: Vehículo (solo al crear) ─────────────────────────── */}
+      {step === 2 && !id && (
+        <>
+          {!agregarVehiculo ? (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-zinc-400">¿Deseas registrar el vehículo del cliente ahora?</p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setAgregarVehiculo(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-orange-800/40 bg-orange-950/20 text-sm font-medium text-orange-400 hover:bg-orange-900/30 transition-colors"
+                >
+                  <Car className="w-4 h-4" />
+                  Sí, agregar vehículo
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="rounded-xl border border-orange-800/40 bg-orange-950/20 p-4 space-y-4">
               <div className="flex items-center justify-between">
@@ -171,14 +236,14 @@ export function ClienteForm({ defaultValues, id }: ClienteFormProps) {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="marca">Marca *</Label>
-                  <Input id="marca" placeholder="Ej: Toyota" className="" {...vehiculoForm.register("marca")} />
+                  <Input id="marca" placeholder="Ej: Toyota" {...vehiculoForm.register("marca")} />
                   {vehiculoFieldError("marca") && (
                     <p className="text-xs text-red-500">{vehiculoFieldError("marca")}</p>
                   )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="modelo">Modelo *</Label>
-                  <Input id="modelo" placeholder="Ej: Corolla 2020" className="" {...vehiculoForm.register("modelo")} />
+                  <Input id="modelo" placeholder="Ej: Corolla 2020" {...vehiculoForm.register("modelo")} />
                   {vehiculoFieldError("modelo") && (
                     <p className="text-xs text-red-500">{vehiculoFieldError("modelo")}</p>
                   )}
@@ -192,7 +257,6 @@ export function ClienteForm({ defaultValues, id }: ClienteFormProps) {
                   type="number"
                   min={0}
                   placeholder="Ej: 45000"
-                  className=""
                   {...vehiculoForm.register("kilometraje")}
                 />
                 {vehiculoFieldError("kilometraje") && (
@@ -201,32 +265,25 @@ export function ClienteForm({ defaultValues, id }: ClienteFormProps) {
               </div>
             </div>
           )}
-        </div>
-      )}
 
-      {/* ── Acciones ──────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          type="submit"
-          disabled={isPending}
-          className="bg-orange-500 hover:bg-orange-600 text-white"
-        >
-          {isPending
-            ? "Guardando..."
-            : id
-              ? "Actualizar Cliente"
-              : agregarVehiculo
-                ? "Crear Cliente y Vehículo"
-                : "Crear Cliente"}
-        </Button>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="inline-flex h-8 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-sm font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
-        >
-          Cancelar
-        </button>
-      </div>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-sm font-medium text-zinc-300 hover:bg-zinc-700 transition-colors gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" /> Anterior
+            </button>
+            <Button type="submit" disabled={isPending} className="bg-orange-500 hover:bg-orange-600 text-white">
+              {isPending
+                ? "Guardando..."
+                : agregarVehiculo
+                  ? "Crear Cliente y Vehículo"
+                  : "Crear Cliente"}
+            </Button>
+          </div>
+        </>
+      )}
     </form>
   );
 }
